@@ -9,6 +9,7 @@
 
 #include "EmbeddingBased.h"
 #include "Utils.h"
+#include "FCM.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/eigen.hpp>
@@ -32,7 +33,7 @@ EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatte
         _featureIndex[_features[i]] = i;
     }
 
-    _indicatorMatrix = Eigen::MatrixXi(_features.size(), 0);
+    _indicatorMatrix = Eigen::MatrixXd(_features.size(), 0);
 
     _constructCoOccurrenceMatrix();
     _constructIndicatorMatrix();
@@ -74,24 +75,33 @@ void EmbeddingBased::_constructCoOccurrenceMatrix() {
 }
 
 void EmbeddingBased::_constructIndicatorMatrix() {
-    cv::Mat cvCoOccurrenceMatrix;
-    Eigen::MatrixXf eigenCoOccurrenceMatrix = _coOccurrenceMatrix.cast<float>();
+//    cv::Mat cvCoOccurrenceMatrix;
+//    Eigen::MatrixXf eigenCoOccurrenceMatrix = _coOccurrenceMatrix.cast<float>();
 
-    cv::eigen2cv(eigenCoOccurrenceMatrix, cvCoOccurrenceMatrix);
+//    cv::eigen2cv(eigenCoOccurrenceMatrix, cvCoOccurrenceMatrix);
+
+    FCM fcm(2, 0.5);
+    fcm.setData(&_coOccurrenceMatrix);
 
     for(int k = 2; _features.size() >= k; k++) {
-        cv::Mat labels, centers;
-        cv::kmeans(cvCoOccurrenceMatrix, k, labels,
-                   cv::TermCriteria( cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0),
-                   3, cv::KMEANS_PP_CENTERS, centers);
+//        cv::Mat labels, centers;
+//        cv::kmeans(cvCoOccurrenceMatrix, k, labels,
+//                   cv::TermCriteria( cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0),
+//                   3, cv::KMEANS_PP_CENTERS, centers);
+//
+//        Eigen::MatrixXi eigenLabels;
+//        cv::cv2eigen(labels, eigenLabels);
+//        Eigen::MatrixXi eigenOneHot = oneHot(eigenLabels, centers.rows);
+        fcm.setClusterNum(k);
+        fcm.initMembership();
 
-        Eigen::MatrixXi eigenLabels;
-        cv::cv2eigen(labels, eigenLabels);
-        Eigen::MatrixXi eigenOneHot = oneHot(eigenLabels, centers.rows);
+        fcm.execute();
+        Eigen::MatrixXd *fuzzyMembership = fcm.getMembership();
+
 
         // Erase small clusters.
         int smallClusterCount = 0;
-        Eigen::VectorXi pointNum = eigenOneHot.colwise().sum();
+        Eigen::VectorXd pointNum = (*fuzzyMembership).colwise().sum();
         std::vector<int> bigClusterIndices;
         for(int i = 0; i < pointNum.size(); ++i) {
             if(pointNum(i) <= 1) {
@@ -102,8 +112,8 @@ void EmbeddingBased::_constructIndicatorMatrix() {
         }
 
         // Concat the indicator matrix.
-        Eigen::MatrixXi indicatorMatrix(_features.size(), _indicatorMatrix.cols() + bigClusterIndices.size());
-        indicatorMatrix << _indicatorMatrix, eigenOneHot(Eigen::all, bigClusterIndices);
+        Eigen::MatrixXd indicatorMatrix(_features.size(), _indicatorMatrix.cols() + bigClusterIndices.size());
+        indicatorMatrix << _indicatorMatrix, (*fuzzyMembership)(Eigen::all, bigClusterIndices);
 
         _indicatorMatrix = indicatorMatrix;
 

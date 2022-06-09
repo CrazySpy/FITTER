@@ -26,11 +26,11 @@ private:
     Simulator *_simulator;
 
     Eigen::MatrixXd _coOccurrenceMatrix;
-    Eigen::MatrixXi _indicatorMatrix;
+    Eigen::MatrixXd _indicatorMatrix;
     Eigen::MatrixXd _embeddingRepresentation;
 
     double _alpha = 0.5;
-    double _beta = 3;
+    double _beta = 0.01;
 
     std::map<ColocationType, double> _singularity;
     std::map<ColocationType, double> _universality;

@@ -39,7 +39,7 @@ private:
     // Store the time of reply which answers true to user.
     unsigned int _positiveAnswerTime;
 
-    double _similarityThreshold = 4;
+    double _similarityThreshold = 0.01;
 private:
     // Calculate semantic distance.
     double Simulator::_calculateSemanticDistance(const ColocationType &pattern1, const ColocationType &pattern2);
