@@ -9,7 +9,7 @@ using namespace std;
 
 int main(int argc, char **argv) {
     if(argc != 3) {
-        cout << "Parameter format :\n" << argv[0] << " [prevalentPatternDataset] [sampleSize]\n";
+        cout << "Parameter format :\n" << argv[0] << " <prevalent pattern dataset path> <sample size>\n";
         return 0;
     }
 
@@ -24,10 +24,13 @@ int main(int argc, char **argv) {
     while(getline(ifs, line)) {
         ColocationType prevalentPattern;
 
-        stringstream ss(line);
-        FeatureType feature;
-        while(ss >> feature) {
+        int start = 0;
+        while(start < line.size()) {
+            int end = line.find_first_of(',', start);
+            if(end == string::npos) end = line.size();
+            string feature = line.substr(start, end - start);
             prevalentPattern.push_back(feature);
+            start = end + 1;
         }
 
         prevalentPatterns.push_back(prevalentPattern);

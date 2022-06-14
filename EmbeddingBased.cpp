@@ -11,10 +11,6 @@
 #include "Utils.h"
 #include "FCM.h"
 
-#include <opencv2/core.hpp>
-#include <opencv2/core/eigen.hpp>
-#include <opencv2/core/types.hpp>
-
 EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
                                unsigned int sampleSize, Simulator *simulator)
     : _prevalentPatterns(prevalentPatterns),
