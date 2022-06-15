@@ -36,11 +36,6 @@ EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatte
     _constructEmbeddingRepresentation();
 
     _generateSampleRank();
-
-    // Construct simulator.
-    if(_simulator == nullptr) {
-        _simulator = new Simulator(_prevalentPatterns, _features, _embeddingRepresentation);
-    }
 }
 
 double EmbeddingBased::_calculateCoOccurrenceValue(const FeatureType &feature1, const FeatureType &feature2) {
@@ -330,10 +325,6 @@ std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns() {
     return _coarsePatterns;
 }
 
-Simulator *EmbeddingBased::getSimulator() {
-    return _simulator;
-}
-
 std::vector<ColocationType> EmbeddingBased::execute() {
     std::vector<ColocationType> candidatePatterns = _prevalentPatterns;
     while(!candidatePatterns.empty()) {
@@ -358,8 +349,4 @@ std::vector<ColocationType> EmbeddingBased::execute() {
     std::sort(_coarsePatterns.begin(), _coarsePatterns.end());
 
     return _filterCoarsePatterns();
-}
-
-EmbeddingBased::~EmbeddingBased() {
-    delete _simulator;
 }

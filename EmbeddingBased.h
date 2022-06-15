@@ -13,7 +13,6 @@
 
 #include <Eigen/Dense>
 
-
 class EmbeddingBased {
 private:
     std::vector<FeatureType> _features;
@@ -62,11 +61,7 @@ public:
     EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
                    unsigned int sampleSize, Simulator *simulator = nullptr);
 
-    Simulator* getSimulator();
-
     std::vector<ColocationType> execute();
-
-    ~EmbeddingBased();
 };
 
 
