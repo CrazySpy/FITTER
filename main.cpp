@@ -35,6 +35,8 @@ int main(int argc, char **argv) {
 
         prevalentPatterns.push_back(prevalentPattern);
     }
+    std::sort(prevalentPatterns.begin(), prevalentPatterns.end());
+    prevalentPatterns.erase(std::unique(prevalentPatterns.begin(), prevalentPatterns.end()), prevalentPatterns.end());
     cout << "Number of prevalent pattern: " << prevalentPatterns.size() << endl;
 
     // Read preferred patterns.
