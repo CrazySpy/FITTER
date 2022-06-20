@@ -17,11 +17,12 @@ EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatte
       _sampleSize(sampleSize),
       _simulator(simulator) {
     for(auto &prevalentPattern : _prevalentPatterns) {
+        std::sort(prevalentPattern.begin(), prevalentPattern.end());
         for(int i = 0; i < prevalentPattern.size(); ++i) {
             _features.push_back(prevalentPattern[i]);
         }
     }
-
+    std::sort(_prevalentPatterns.begin(), _prevalentPatterns.end());
     std::sort(_features.begin(), _features.end());
     _features.erase(std::unique(_features.begin(), _features.end()), _features.end());
 

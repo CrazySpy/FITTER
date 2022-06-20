@@ -14,8 +14,16 @@ Simulator::Simulator(const std::vector<ColocationType> &prevalentPatterns,
       _preferredPatterns(preferredPatterns),
       _answerTime(0),
       _positiveAnswerTime(0) {
+    for(auto &prevalentPattern : _prevalentPatterns) {
+        std::sort(prevalentPattern.begin(), prevalentPattern.end());
+    }
     std::sort(_prevalentPatterns.begin(), _prevalentPatterns.end());
+
+    for(auto &preferredPattern : _preferredPatterns) {
+        std::sort(preferredPattern.begin(), preferredPattern.end());
+    }
     std::sort(_preferredPatterns.begin(), _preferredPatterns.end());
+
     _generateDislikePattern();
 //    unsigned int maxPatternLength = 0;
 //    for(auto &prevalentPattern : _prevalentPatterns) {
