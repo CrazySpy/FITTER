@@ -31,6 +31,8 @@ private:
     double _alpha = 0.5;
     double _beta = 0.01;
 
+    double _markovBoundary;
+
     std::map<ColocationType, double> _singularity;
     std::map<ColocationType, double> _universality;
     std::map<ColocationType, double> _sampleRank;
@@ -56,10 +58,13 @@ private:
                                                 const std::vector<ColocationType> &dislikePatterns);
     std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns();
 
+    Eigen::MatrixXd _calculateDistances(const Eigen::MatrixXd &N);
+    double _calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances);
 
 public:
     EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                   unsigned int sampleSize, Simulator *simulator = nullptr);
+                   unsigned int sampleSize, double markovBoundary,
+                   Simulator *simulator = nullptr);
 
     std::vector<ColocationType> execute();
 };
