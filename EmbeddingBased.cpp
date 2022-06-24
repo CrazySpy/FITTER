@@ -126,7 +126,7 @@ void EmbeddingBased::_constructEmbeddingRepresentation() {
 
     Eigen::MatrixXd N = centered * V.transpose();
 
-    Eigen::MatrixXd distances = _calculateDistances(N);
+    Eigen::MatrixXd distances = _calculateFeatureDistances(N);
     double beta = _calculateBetaByMarkovInequality(distances);
     std::cout << "Beta: " << beta << std::endl;
 
@@ -158,7 +158,8 @@ double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1
             auto featureIndex2 = _featureIndex[pattern2[j]];
             Eigen::VectorXd embedding2 = _embeddingRepresentation(featureIndex2, Eigen::indexing::all);
 
-            double distance = (embedding1 - embedding2).lpNorm<2>();
+            // Normalize distance.
+            double distance = (embedding1 - embedding2).lpNorm<2>() / sqrt(_features.size());
             if(bestDistance < 0 || distance < bestDistance) {
                 bestDistance = distance;
             }
@@ -175,7 +176,7 @@ double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1
             auto featureIndex1 = _featureIndex[pattern1[j]];
             Eigen::VectorXd embedding1 = _embeddingRepresentation(featureIndex1, Eigen::indexing::all);
 
-            double distance = (embedding2 - embedding1).lpNorm<2>();
+            double distance = (embedding2 - embedding1).lpNorm<2>() / sqrt(_features.size());
             if(bestDistance < 0 || distance < bestDistance) {
                 bestDistance = distance;
             }
@@ -185,6 +186,23 @@ double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1
     }
 
     return totalDistance / 2;
+}
+
+double EmbeddingBased::_calculateStructuralDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+    ColocationType union_features, intersected_features;
+    std::set_union(pattern1.begin(), pattern1.end(), pattern2.begin(), pattern2.end(), std::back_inserter(union_features));
+    std::set_intersection(pattern1.begin(), pattern1.end(),pattern2.begin(), pattern2.end(), std::back_inserter(intersected_features) );
+
+    return 1 - intersected_features.size() * 1.0 / union_features.size();
+}
+
+double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+    double semanticDistance = _calculateSemanticDistance(pattern1, pattern2);
+    double structuralDistance = _calculateStructuralDistance(pattern1, pattern2);
+
+    //return 2 * semanticDistance * (1 - structuralDistance) / (semanticDistance + (1 - structuralDistance));
+    return semanticDistance / structuralDistance;
+    //return (semanticDistance + (1 - structuralDistance)) / 2;
 }
 
 double EmbeddingBased::_calculateSingularity(const ColocationType &pattern) {
@@ -283,7 +301,7 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
         double minDistance = -1;
         ColocationType similarity;
         for(int j = 0; j < candidatePatterns.size(); ++j) {
-            double distance = _calculateSemanticDistance(preferredPatterns[i], candidatePatterns[j]);
+            double distance = _calculatePatternDistance(preferredPatterns[i], candidatePatterns[j]);
             if(minDistance < 0 || distance < minDistance) {
                 minDistance = distance;
                 similarity = candidatePatterns[j];
@@ -311,7 +329,7 @@ void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candida
         double minDistance = -1;
         ColocationType similarity;
         for(int j = 0; j < candidatePatterns.size(); ++j) {
-            double distance = _calculateSemanticDistance(dislikePatterns[i], candidatePatterns[j]);
+            double distance = _calculatePatternDistance(dislikePatterns[i], candidatePatterns[j]);
             if(minDistance < 0 || distance < minDistance) {
                 minDistance = distance;
                 similarity = candidatePatterns[j];
@@ -331,7 +349,7 @@ std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns() {
     return _coarsePatterns;
 }
 
-Eigen::MatrixXd EmbeddingBased::_calculateDistances(const Eigen::MatrixXd &N) {
+Eigen::MatrixXd EmbeddingBased::_calculateFeatureDistances(const Eigen::MatrixXd &N) {
     Eigen::MatrixXd distances(N.cols(), N.cols());
     for(int i = 0; i < N.cols(); ++i) {
         Eigen::VectorXd col1 = N(Eigen::indexing::all, i);
@@ -344,6 +362,7 @@ Eigen::MatrixXd EmbeddingBased::_calculateDistances(const Eigen::MatrixXd &N) {
 
     return distances;
 }
+
 double EmbeddingBased::_calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances) {
     double mean = distances.mean();
     std::cout << "Means: " << mean << std::endl;

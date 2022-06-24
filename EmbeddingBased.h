@@ -29,7 +29,6 @@ private:
     Eigen::MatrixXd _embeddingRepresentation;
 
     double _alpha = 0.5;
-    double _beta = 0.01;
 
     double _markovBoundary;
 
@@ -44,6 +43,8 @@ private:
     void _constructEmbeddingRepresentation();
 
     double _calculateSemanticDistance(const ColocationType &pattern1, const ColocationType &pattern2);
+    double _calculateStructuralDistance(const ColocationType &pattern1, const ColocationType &pattern2);
+    double _calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2);
 
     double _calculateSingularity(const ColocationType &pattern);
     double _calculateUniversality(const ColocationType &pattern);
@@ -58,7 +59,7 @@ private:
                                                 const std::vector<ColocationType> &dislikePatterns);
     std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns();
 
-    Eigen::MatrixXd _calculateDistances(const Eigen::MatrixXd &N);
+    Eigen::MatrixXd _calculateFeatureDistances(const Eigen::MatrixXd &N);
     double _calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances);
 
 public:

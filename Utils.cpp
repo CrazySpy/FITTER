@@ -13,7 +13,7 @@ Eigen::MatrixXi oneHot(Eigen::VectorXi indices, int depth) {
 
     for(auto i = 0; i < indices.size(); ++i) {
         //oneHotMatrix(i, i) = 1;
-        oneHotMatrix(i, Eigen::all)[indices(i)] = 1;
+        oneHotMatrix(i, Eigen::indexing::all)[indices(i)] = 1;
     }
 
     return oneHotMatrix;
