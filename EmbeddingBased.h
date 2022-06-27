@@ -29,6 +29,7 @@ private:
     Eigen::MatrixXd _embeddingRepresentation;
 
     double _alpha = 0.5;
+    double _influenceIndex;
 
     double _markovBoundary;
 
@@ -65,6 +66,7 @@ private:
 public:
     EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
                    unsigned int sampleSize, double markovBoundary,
+                   double influenceIndex,
                    Simulator *simulator = nullptr);
 
     std::vector<ColocationType> execute();

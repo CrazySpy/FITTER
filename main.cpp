@@ -7,8 +7,8 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-    if(argc != 5) {
-        cout << "Parameter format :\n" << argv[0] << " <prevalent pattern dataset path> <preferred pattern dataset path> <sample size> <Markov boundary>\n";
+    if(argc != 6) {
+        cout << "Parameter format :\n" << argv[0] << " <prevalent pattern dataset path> <preferred pattern dataset path> <sample size> <Markov boundary> <Influence Index>\n";
         return 0;
     }
 
@@ -16,6 +16,7 @@ int main(int argc, char **argv) {
     string preferredPatternDataset(argv[2]);
     unsigned int sampleSize = stoul(argv[3]);
     double markovBoundary = stod(argv[4]);
+    double influenceIndex = stod(argv[5]);
 
     // Read prevalent patterns.
     std::vector<ColocationType> prevalentPatterns;
@@ -61,7 +62,7 @@ int main(int argc, char **argv) {
 
     Simulator simulator = Simulator(prevalentPatterns, preferredPatterns);
 
-    EmbeddingBased embedding(prevalentPatterns, sampleSize, markovBoundary, &simulator);
+    EmbeddingBased embedding(prevalentPatterns, sampleSize, markovBoundary, influenceIndex, &simulator);
     auto predictPatterns = embedding.execute();
 
     ConfusionMatrixType confusionMatrix = simulator.evaluate(predictPatterns);

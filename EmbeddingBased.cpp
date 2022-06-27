@@ -12,10 +12,11 @@
 #include "FCM.h"
 
 EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                               unsigned int sampleSize, double markovBoundary, Simulator *simulator)
+                               unsigned int sampleSize, double markovBoundary, double influenceIndex, Simulator *simulator)
     : _prevalentPatterns(prevalentPatterns),
       _sampleSize(sampleSize),
       _markovBoundary(markovBoundary),
+      _influenceIndex(influenceIndex),
       _simulator(simulator) {
     for(auto &prevalentPattern : _prevalentPatterns) {
         std::sort(prevalentPattern.begin(), prevalentPattern.end());
@@ -201,7 +202,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
     double structuralDistance = _calculateStructuralDistance(pattern1, pattern2);
 
     //return 2 * semanticDistance * (1 - structuralDistance) / (semanticDistance + (1 - structuralDistance));
-    return semanticDistance / structuralDistance;
+    return semanticDistance / std::pow(structuralDistance, _influenceIndex);
     //return (semanticDistance + (1 - structuralDistance)) / 2;
 }
 
