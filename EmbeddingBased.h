@@ -60,8 +60,9 @@ private:
                                                 const std::vector<ColocationType> &dislikePatterns);
     std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns();
 
-    Eigen::MatrixXd _calculateFeatureDistances(const Eigen::MatrixXd &N);
+    Eigen::MatrixXd _calculateRepresentationColumnWiseDistances(const Eigen::MatrixXd &N);
     double _calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances);
+    Eigen::MatrixXd _selectRepresentation(const Eigen::MatrixXd &representation, const Eigen::MatrixXd &columnWiseDistances, double beta);
 
 public:
     EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,

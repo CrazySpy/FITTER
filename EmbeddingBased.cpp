@@ -94,13 +94,12 @@ void EmbeddingBased::_constructIndicatorMatrix() {
 
 
         // Erase small clusters.
-        int smallClusterCount = 0;
         Eigen::VectorXd pointNum = (*fuzzyMembership).colwise().sum();
+        int smallClusterCount = (pointNum.array() <= 1).count();
+
         std::vector<int> bigClusterIndices;
         for(int i = 0; i < pointNum.size(); ++i) {
-            if(pointNum(i) <= 1) {
-                ++smallClusterCount;
-            } else {
+            if(pointNum(i) > 1) {
                 bigClusterIndices.push_back(i);
             }
         }
@@ -127,61 +126,74 @@ void EmbeddingBased::_constructEmbeddingRepresentation() {
 
     Eigen::MatrixXd N = centered * V.transpose();
 
-    Eigen::MatrixXd distances = _calculateFeatureDistances(N);
+    Eigen::MatrixXd distances = _calculateRepresentationColumnWiseDistances(N);
     double beta = _calculateBetaByMarkovInequality(distances);
     std::cout << "Beta: " << beta << std::endl;
 
-    std::vector<int> goodNColumnIndex;
-    for(int i = 0; i < N.cols(); ++i) {
-        double maxDistance = 0;
-        for(int j = 0; j < N.cols(); ++j) {
-            maxDistance = std::max(maxDistance, distances(i, j));
-        }
-
-        if(maxDistance >= beta) {
-            goodNColumnIndex.push_back(i);
-        }
-    }
-
-    _embeddingRepresentation = N(Eigen::indexing::all, goodNColumnIndex);
+//    std::vector<int> goodNColumnIndex;
+//    for(int i = 0; i < N.cols(); ++i) {
+//        double maxDistance = 0;
+//        for(int j = 0; j < N.cols(); ++j) {
+//            maxDistance = std::max(maxDistance, distances(i, j));
+//        }
+//
+//        if(maxDistance >= beta) {
+//            goodNColumnIndex.push_back(i);
+//        }
+//    }
+//
+//    _embeddingRepresentation = N(Eigen::indexing::all, goodNColumnIndex);
+    _embeddingRepresentation = _selectRepresentation(N, distances, beta);
     std::cout << "Raw embedding column number: " << N.cols() << std::endl;
-    std::cout << "Eliminate column number: " << N.cols() - goodNColumnIndex.size() << std::endl;
+    std::cout << "Eliminate column number: " << N.cols() - _embeddingRepresentation.cols() << std::endl;
 }
 
 double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+    std::vector<Eigen::Index> pattern1Indices, pattern2Indices;
+    for(int i = 0; i < pattern1.size(); ++i) {
+        pattern1Indices.push_back(_featureIndex[pattern1[i]]);
+    }
+    for(int i = 0; i < pattern2.size(); ++i) {
+        pattern2Indices.push_back(_featureIndex[pattern2[i]]);
+    }
+    Eigen::MatrixXd pattern1Embeddings = _embeddingRepresentation(pattern1Indices, Eigen::indexing::all);
+    Eigen::MatrixXd pattern2Embeddings = _embeddingRepresentation(pattern2Indices, Eigen::indexing::all);
+
     double totalDistance = 0;
 
     for(int i = 0; i < pattern1.size(); ++i) {
-        auto featureIndex1 = _featureIndex[pattern1[i]];
-        Eigen::VectorXd embedding1 = _embeddingRepresentation(featureIndex1, Eigen::indexing::all);
-        double bestDistance = -1;
-        for(int j = 0; j < pattern2.size(); ++j) {
-            auto featureIndex2 = _featureIndex[pattern2[j]];
-            Eigen::VectorXd embedding2 = _embeddingRepresentation(featureIndex2, Eigen::indexing::all);
+        Eigen::RowVectorXd embedding1 = pattern1Embeddings.row(i);
+        double bestDistance = (pattern2Embeddings.rowwise() - embedding1).rowwise().lpNorm<2>().minCoeff() / sqrt(_features.size());
 
-            // Normalize distance.
-            double distance = (embedding1 - embedding2).lpNorm<2>() / sqrt(_features.size());
-            if(bestDistance < 0 || distance < bestDistance) {
-                bestDistance = distance;
-            }
-        }
+//        Eigen::VectorXd embedding1 = _embeddingRepresentation.row(featureIndex1);
+//        double bestDistance = -1;
+//        for(int j = 0; j < pattern2.size(); ++j) {
+//            auto featureIndex2 = _featureIndex[pattern2[j]];
+//            Eigen::VectorXd embedding2 = _embeddingRepresentation.row(featureIndex2);
+//
+//            // Normalize distance.
+//            double distance = (embedding1 - embedding2).lpNorm<2>() / sqrt(_features.size());
+//            if(bestDistance < 0 || distance < bestDistance) {
+//                bestDistance = distance;
+//            }
+//        }
 
         totalDistance += bestDistance;
     }
 
     for(int i = 0; i < pattern2.size(); ++i) {
-        auto featureIndex2 = _featureIndex[pattern2[i]];
-        Eigen::VectorXd embedding2 = _embeddingRepresentation(featureIndex2, Eigen::indexing::all);
-        double bestDistance = -1;
-        for(int j = 0; j < pattern1.size(); ++j) {
-            auto featureIndex1 = _featureIndex[pattern1[j]];
-            Eigen::VectorXd embedding1 = _embeddingRepresentation(featureIndex1, Eigen::indexing::all);
-
-            double distance = (embedding2 - embedding1).lpNorm<2>() / sqrt(_features.size());
-            if(bestDistance < 0 || distance < bestDistance) {
-                bestDistance = distance;
-            }
-        }
+        Eigen::RowVectorXd embedding2 = pattern2Embeddings.row(i);
+        double bestDistance = (pattern1Embeddings.rowwise() - embedding2).rowwise().lpNorm<2>().minCoeff() / sqrt(_features.size());
+//        double bestDistance = -1;
+//        for(int j = 0; j < pattern1.size(); ++j) {
+//            auto featureIndex1 = _featureIndex[pattern1[j]];
+//            Eigen::VectorXd embedding1 = _embeddingRepresentation.row(featureIndex1);
+//
+//            double distance = (embedding2 - embedding1).lpNorm<2>() / sqrt(_features.size());
+//            if(bestDistance < 0 || distance < bestDistance) {
+//                bestDistance = distance;
+//            }
+//        }
 
         totalDistance += bestDistance;
     }
@@ -350,15 +362,16 @@ std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns() {
     return _coarsePatterns;
 }
 
-Eigen::MatrixXd EmbeddingBased::_calculateFeatureDistances(const Eigen::MatrixXd &N) {
+Eigen::MatrixXd EmbeddingBased::_calculateRepresentationColumnWiseDistances(const Eigen::MatrixXd &N) {
     Eigen::MatrixXd distances(N.cols(), N.cols());
     for(int i = 0; i < N.cols(); ++i) {
-        Eigen::VectorXd col1 = N(Eigen::indexing::all, i);
-        for(int j = 0; j < N.cols(); ++j) {
-            Eigen::VectorXd col2 = N(Eigen::indexing::all, j);
-            double distance = (col1 - col2).lpNorm<2>();
-            distances(i, j) = distance;
-        }
+        Eigen::VectorXd col1 = N.col(i);
+        distances.row(i) = (N.colwise() - col1).colwise().lpNorm<2>();
+//        for(int j = 0; j < N.cols(); ++j) {
+//            Eigen::VectorXd col2 = N.col(j);
+//            double distance = (col1 - col2).lpNorm<2>();
+//            distances(i, j) = distance;
+//        }
     }
 
     return distances;
@@ -369,6 +382,39 @@ double EmbeddingBased::_calculateBetaByMarkovInequality(const Eigen::MatrixXd &d
     std::cout << "Means: " << mean << std::endl;
     double a = 1.0 / (1 - _markovBoundary);
     return mean * a;
+}
+
+Eigen::MatrixXd EmbeddingBased::_selectRepresentation(const Eigen::MatrixXd &representation,
+                                                      const Eigen::MatrixXd &columnWiseDistances,
+                                                      double beta) {
+    Eigen::MatrixXd newRepresentation(representation.rows(), 1);
+    // Choose the feature with the largest distances to others as initial.
+    Eigen::Index initialRepresentationIndex;
+    columnWiseDistances.rowwise().mean().maxCoeff(&initialRepresentationIndex);
+    newRepresentation.col(0) = representation.col(initialRepresentationIndex);
+
+    for(int i = 0; i < representation.cols(); ++i) {
+        if(i == initialRepresentationIndex) continue;
+        Eigen::VectorXd col = representation.col(i);
+        Eigen::VectorXd newDistances = (newRepresentation.colwise() - col).colwise().lpNorm<2>();
+        Eigen::Index maxDistanceIndex;
+        double maxDistance = newDistances.maxCoeff(&maxDistanceIndex);
+        if(maxDistance >= beta) {
+            newRepresentation.conservativeResize(newRepresentation.rows(), newRepresentation.cols() + 1);
+            newRepresentation.col(newRepresentation.cols() - 1) = col;
+        }
+//        Eigen::VectorXd candidateCol = representation(Eigen::indexing::all, i);
+//        double maxDistance = -1;
+//        for(int j = 0; j < newRepresentation.cols(); ++j) {
+//            Eigen::VectorXd col2 = newRepresentation(Eigen::indexing::all, j);
+//            double distance = (candidateCol - col2).lpNorm<2>();
+//            if(maxDistance < 0 || distance > maxDistance) {
+//                maxDistance = distance;
+//            }
+//        }
+    }
+
+    return newRepresentation;
 }
 
 std::vector<ColocationType> EmbeddingBased::execute() {

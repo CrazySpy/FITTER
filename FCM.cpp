@@ -83,11 +83,11 @@ void FCM::_computeCenters(){
     for(int j = 0; j < _clusterNum; ++j) {
         Eigen::RowVectorXd numerator = Eigen::VectorXd::Zero(_dimensionNum);
         for(int i = 0; i < _dataMatrix->rows(); ++i) {
-            numerator += t(i, j) * (*_dataMatrix)(i, Eigen::indexing::all);
+            numerator += t(i, j) * (*_dataMatrix).row(i);
         }
-        double denominator = (*_membershipMatrix)(Eigen::indexing::all, j).sum();
+        double denominator = (*_membershipMatrix).col(j).sum();
 
-        (*_clusterCenters)(j, Eigen::indexing::all) = numerator / denominator;
+        (*_clusterCenters).row(j) = numerator / denominator;
     }
 
 //    for (int j = 0; j < _clusterNum; j++) { // loop for each cluster
@@ -116,7 +116,7 @@ double FCM::_calculateDistance(unsigned int i, unsigned int k){
       throw std::logic_error("ERROR: number of dimensions should not be zero\n");
   }
 
-  return ((*_dataMatrix)(k, Eigen::indexing::all) - (*_clusterCenters)(i, Eigen::indexing::all)).lpNorm<2>();
+  return ((*_dataMatrix).row(k) - (*_clusterCenters).row(i)).lpNorm<2>();
 }
 
 double FCM::_calculatePointMembership(unsigned int i, unsigned int k){
