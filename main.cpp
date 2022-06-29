@@ -3,6 +3,7 @@
 
 #include "EmbeddingBased.h"
 #include "Types.h"
+#include "EventClock/EventClock.hpp"
 
 using namespace std;
 
@@ -62,20 +63,28 @@ int main(int argc, char **argv) {
 
     Simulator simulator = Simulator(prevalentPatterns, preferredPatterns);
 
+    EventClock<TimeTicks::Microseconds> eventClock;
+    eventClock.startClock("total");
     EmbeddingBased embedding(prevalentPatterns, sampleSize, markovBoundary, influenceIndex, &simulator);
+    eventClock.startClock("execution");
     auto predictPatterns = embedding.execute();
+    eventClock.stopClock("execution");
+    eventClock.stopClock("total");
 
     ConfusionMatrixType confusionMatrix = simulator.evaluate(predictPatterns);
     double precision = confusionMatrix.TP * 1.0 / (confusionMatrix.TP + confusionMatrix.FP);
     double recall = confusionMatrix.TP * 1.0 / (confusionMatrix.TP + confusionMatrix.FN);
     double fScore = 2 * precision * recall / (precision + recall);
 
-    cout << "Answer time : " << simulator.getAnswerTime() << endl;
-    cout << "Answer interesting time : " << simulator.getPositiveAnswerTime() << endl;
+    cout << "Answer time: " << simulator.getAnswerTime() << endl;
+    cout << "Answer interesting time: " << simulator.getPositiveAnswerTime() << endl;
     cout << confusionMatrix << endl;
-    cout << "precision : " << precision << endl;
-    cout << "recall : " << recall << endl;
-    cout << "F-score : " << fScore << endl;
+    cout << "precision: " << precision << endl;
+    cout << "recall: " << recall << endl;
+    cout << "F-score: " << fScore << endl;
+
+    cout << "Execution time: " << eventClock.getEventDuration("execution").count() << " ms" << endl;
+    cout << "Total running time: " << eventClock.getEventDuration("total").count() << " ms" << endl;
 
     return 0;
 }

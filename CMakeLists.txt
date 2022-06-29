@@ -11,7 +11,7 @@ else ()
     add_compile_options(-march=native)
 endif ()
 
-add_executable(EmbeddingBased main.cpp EmbeddingBased.cpp EmbeddingBased.h Types.h Utils.h Utils.cpp Simulator.cpp Simulator.h FCM.h FCM.cpp)
+add_executable(EmbeddingBased main.cpp EmbeddingBased.cpp EmbeddingBased.h Types.h Utils.h Utils.cpp Simulator.cpp Simulator.h FCM.h FCM.cpp EventClock/EventClock.hpp)
 
 find_package (Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})

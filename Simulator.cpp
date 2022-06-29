@@ -49,8 +49,8 @@ Simulator::Simulator(const std::vector<ColocationType> &prevalentPatterns,
 //    _generateDislikePattern();
 //
 //    std::cout << "Simulator favor number : " << favors.size() << std::endl;
-    std::cout << "Simulator preferred pattern number : " << _preferredPatterns.size() << std::endl;
-    std::cout << "Simulator dislike pattern number : " << _dislikePatterns.size() << std::endl;
+    std::cout << "Simulator preferred pattern number: " << _preferredPatterns.size() << std::endl;
+    std::cout << "Simulator dislike pattern number: " << _dislikePatterns.size() << std::endl;
 }
 
 void Simulator::_generateDislikePattern() {

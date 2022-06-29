@@ -1,0 +1,3 @@
+[submodule "EventClock"]
+	path = EventClock
+	url = https://github.com/CrazySpy/EventClock.git
