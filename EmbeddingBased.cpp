@@ -77,7 +77,10 @@ void EmbeddingBased::_constructIndicatorMatrix() {
     FCM fcm(2, 0.5);
     fcm.setData(&_coOccurrenceMatrix);
 
+    int smallClusterCount = 0;
+    int iterationRound = 0;
     for(int k = 2; _features.size() >= k; k++) {
+        iterationRound++;
 //        cv::Mat labels, centers;
 //        cv::kmeans(cvCoOccurrenceMatrix, k, labels,
 //                   cv::TermCriteria( cv::TermCriteria::EPS + cv::TermCriteria::COUNT, 10, 1.0),
@@ -95,7 +98,7 @@ void EmbeddingBased::_constructIndicatorMatrix() {
 
         // Erase small clusters.
         Eigen::VectorXd pointNum = (*fuzzyMembership).colwise().sum();
-        int smallClusterCount = (pointNum.array() <= 1).count();
+        smallClusterCount += (pointNum.array() <= 1.0 / k * _features.size()).count();
 
         std::vector<int> bigClusterIndices;
         for(int i = 0; i < pointNum.size(); ++i) {
@@ -111,10 +114,11 @@ void EmbeddingBased::_constructIndicatorMatrix() {
         _indicatorMatrix = indicatorMatrix;
 
         // Quit loop condition.
-        if(smallClusterCount > std::ceil(k / _alpha)) {
+        if(smallClusterCount >= std::ceil(k / _alpha)) {
             break;
         }
     }
+    std::cout << "Iteration round: " << iterationRound << std::endl;
 }
 
 void EmbeddingBased::_constructEmbeddingRepresentation() {
