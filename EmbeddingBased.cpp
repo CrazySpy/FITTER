@@ -6,17 +6,19 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <unordered_set>
 
 #include "EmbeddingBased.h"
 #include "Utils.h"
 #include "FCM.h"
 
 EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                               unsigned int sampleSize, double markovBoundary, double influenceIndex, Simulator *simulator)
+                               unsigned int sampleSize, double markovBoundary, double influenceIndex, double mu, Simulator *simulator)
     : _prevalentPatterns(prevalentPatterns),
       _sampleSize(sampleSize),
       _markovBoundary(markovBoundary),
       _influenceIndex(influenceIndex),
+      _mu(mu),
       _simulator(simulator) {
     for(auto &prevalentPattern : _prevalentPatterns) {
         std::sort(prevalentPattern.begin(), prevalentPattern.end());
@@ -38,7 +40,7 @@ EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatte
     _constructIndicatorMatrix();
     _constructEmbeddingRepresentation();
 
-    _generateSampleRank();
+//    _generateSampleRank();
 }
 
 double EmbeddingBased::_calculateCoOccurrenceValue(const FeatureType &feature1, const FeatureType &feature2) {
@@ -222,44 +224,77 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
     //return (semanticDistance + (1 - structuralDistance)) / 2;
 }
 
-double EmbeddingBased::_calculateSingularity(const ColocationType &pattern) {
-    // $D(P) = max_{f \in P}(1 / \Vert c(f) \Vert)$
-    // c(f) is the co-occurrence vector of feature f.
+//double EmbeddingBased::_calculateSingularity(const ColocationType &pattern) {
+//    // $D(P) = max_{f \in P}(1 / \Vert c(f) \Vert)$
+//    // c(f) is the co-occurrence vector of feature f.
+//
+//    std::vector<unsigned int> featureIndices;
+//    for(auto &feature : pattern) {
+//        featureIndices.push_back(_featureIndex[feature]);
+//    }
+//
+//    auto coOccurrenceMatrix = _coOccurrenceMatrix(featureIndices, Eigen::indexing::all);
+////    double singularity = coOccurrenceMatrix.rowwise().lpNorm<2>().cwiseInverse().maxCoeff(); // S1
+//    double singularity = 1 - coOccurrenceMatrix.rowwise().lpNorm<2>().minCoeff() / std::sqrt(coOccurrenceMatrix.cols()); // S2
+////    double singularity = 1 - (coOccurrenceMatrix * coOccurrenceMatrix).diagonal().minCoeff() / coOccurrenceMatrix.cols(); // S3
+//
+//    return singularity;
+//}
+//
+//double EmbeddingBased::_calculateUniversality(const ColocationType &pattern) {
+//    std::vector<unsigned int> featureIndices;
+//    for(auto &feature : pattern) {
+//        featureIndices.push_back(_featureIndex[feature]);
+//    }
+//
+//    auto coOccurrenceMatrix = _coOccurrenceMatrix(featureIndices, featureIndices);
+//
+////    return (coOccurrenceMatrix * coOccurrenceMatrix).trace() / pattern.size(); //U1
+////    return coOccurrenceMatrix.norm() / pattern.size(); // U2
+//
+////    return coOccurrenceMatrix.rowwise().lpNorm<2>().maxCoeff() / std::sqrt(pattern.size()); //U3
+////    return coOccurrenceMatrix.rowwise().mean().maxCoeff(); // U4
+//    return (coOccurrenceMatrix * coOccurrenceMatrix).diagonal().maxCoeff() / pattern.size(); // U5
+//}
+//
+//void EmbeddingBased::_generateSampleRank() {
+//    for(auto &pattern : _prevalentPatterns) {
+//        double singularity = _calculateSingularity(pattern);
+//        double universality = _calculateUniversality(pattern);
+////        double sampleRank = (1 + _mu * _mu) * singularity * universality / (_mu * _mu * singularity + universality); // R1
+////        double sampleRank = std::pow(singularity, _mu) * universality; // R2
+//        double sampleRank = _mu * singularity + (1 - _mu) * universality; // R3
+////        std::cout << sampleRank << std::endl;
+//
+//        _singularity[pattern] = singularity;
+//        _universality[pattern] = universality;
+//        _sampleRank[pattern] = sampleRank;
+//    }
+//}
 
-    std::vector<unsigned int> featureIndices;
-    for(auto &feature : pattern) {
-        featureIndices.push_back(_featureIndex[feature]);
-    }
-
-    auto coOccurrenceMatrix = _coOccurrenceMatrix(featureIndices, Eigen::indexing::all);
-    double singularity = coOccurrenceMatrix.rowwise().lpNorm<2>().cwiseInverse().maxCoeff();
-
-    return singularity;
-}
-
-double EmbeddingBased::_calculateUniversality(const ColocationType &pattern) {
-    std::vector<unsigned int> featureIndices;
-    for(auto &feature : pattern) {
-        featureIndices.push_back(_featureIndex[feature]);
-    }
-
-    auto coOccurrenceMatrix = _coOccurrenceMatrix(featureIndices, featureIndices);
-
-    return coOccurrenceMatrix.norm() / pattern.size();
-}
-
-void EmbeddingBased::_generateSampleRank() {
-    for(auto &pattern : _prevalentPatterns) {
-        double singularity = _calculateSingularity(pattern);
-        double universality = _calculateUniversality(pattern);
-        double sampleRank = singularity * universality;
-
-        _singularity[pattern] = singularity;
-        _universality[pattern] = universality;
-        _sampleRank[pattern] = sampleRank;
-    }
-}
-
+//std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
+//    if(_sampleSize >= candidatePatterns.size()) {
+//        auto sample = candidatePatterns;
+//        candidatePatterns.clear();
+//        return sample;
+//    }
+//
+//    // Store the final sample result.
+//    std::vector<ColocationType> sample;
+//    std::vector<std::pair<double, ColocationType>> candidateSampleRank;
+//    for(auto &pattern : candidatePatterns) {
+//        candidateSampleRank.push_back({_sampleRank[pattern], pattern});
+//    }
+//    std::sort(candidateSampleRank.begin(), candidateSampleRank.end(), std::less());
+//
+//    for(int i = 0; i < _sampleSize; ++i) {
+//        auto &pattern = candidateSampleRank[i].second;
+//        sample.push_back(pattern);
+//        candidatePatterns.erase(std::remove(std::begin(candidatePatterns), std::end(candidatePatterns), pattern), std::end(candidatePatterns));
+//    }
+//
+//    return sample;
+//}
 
 std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
     if(_sampleSize >= candidatePatterns.size()) {
@@ -268,21 +303,60 @@ std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<Colocati
         return sample;
     }
 
-    // Store the final sample result.
-    std::vector<ColocationType> sample;
-    std::vector<std::pair<double, ColocationType>> candidateSampleRank;
-    for(auto &pattern : candidatePatterns) {
-        candidateSampleRank.push_back({_sampleRank[pattern], pattern});
-    }
-    std::sort(candidateSampleRank.begin(), candidateSampleRank.end(), std::less());
+    std::vector<ColocationType> samples;
+
+    static std::unordered_set<FeatureType> globalFeatures;
+//    static std::vector<Eigen::Index> globalIndices;
+
+    std::unordered_set<FeatureType> localFeatures;
+//    std::vector<Eigen::Index> localIndices;
 
     for(int i = 0; i < _sampleSize; ++i) {
-        auto &pattern = candidateSampleRank[i].second;
-        sample.push_back(pattern);
-        candidatePatterns.erase(std::remove(std::begin(candidatePatterns), std::end(candidatePatterns), pattern), std::end(candidatePatterns));
+        double bestSampleRank = 0;
+        ColocationType bestPattern;
+//        std::vector<Eigen::Index> bestPatternIndices;
+
+        for(auto &candidatePattern : candidatePatterns) {
+//            std::vector<Eigen::Index> globalPatternIndices = globalIndices;
+//            std::vector<Eigen::Index> localPatternIndices = localIndices;
+//            for(auto &feature : candidatePattern) {
+//                globalPatternIndices.push_back(_featureIndex[feature]);
+//                localPatternIndices.push_back(_featureIndex[feature]);
+//            }
+//            std::sort(globalPatternIndices.begin(), globalPatternIndices.end());
+//            globalPatternIndices.erase(std::unique(globalPatternIndices.begin(), globalPatternIndices.end()), globalPatternIndices.end());
+//            std::sort(localPatternIndices.begin(), localPatternIndices.end());
+//            globalPatternIndices.erase(std::unique(localPatternIndices.begin(), localPatternIndices.end()), localPatternIndices.end());
+
+            //Eigen::MatrixXd patternCoOccurrenceMatrix = _coOccurrenceMatrix(globalPatternIndices, globalPatternIndices);
+
+            //double sampleRank = (1 - _mu) * (1 - ((patternCoOccurrenceMatrix * patternCoOccurrenceMatrix).diagonal() / globalPatternIndices.size()).array()).maxCoeff() + _mu * globalPatternIndices.size() / _features.size();
+
+            std::unordered_set<FeatureType> testGlobalFeatures = globalFeatures;
+            std::unordered_set<FeatureType> testLocalFeatures = localFeatures;
+
+            testGlobalFeatures.insert(candidatePattern.begin(), candidatePattern.end());
+            testLocalFeatures.insert(candidatePattern.begin(), candidatePattern.end());
+            double testGlobalInformation = 1.0 * testGlobalFeatures.size() / _features.size();
+            double testLocalInformation = 1.0 * testLocalFeatures.size() / _features.size();
+
+            double sampleRank = _mu * testLocalInformation + (1 - _mu) * testGlobalInformation;
+
+            if(sampleRank >= bestSampleRank) {
+                bestSampleRank = sampleRank;
+                bestPattern = candidatePattern;
+//                bestPatternIndices = globalPatternIndices;
+            }
+        }
+
+        samples.push_back(bestPattern);
+        globalFeatures.insert(bestPattern.begin(), bestPattern.end());
+        localFeatures.insert(bestPattern.begin(), bestPattern.end());
+//        globalIndices = bestPatternIndices;
+        std::erase(candidatePatterns, bestPattern);
     }
 
-    return sample;
+    return samples;
 }
 
 std::vector<bool> EmbeddingBased::_interactiveSurvey(const std::vector<ColocationType> &samplePatterns) {
@@ -423,15 +497,15 @@ Eigen::MatrixXd EmbeddingBased::_selectRepresentation(const Eigen::MatrixXd &rep
 
 std::vector<ColocationType> EmbeddingBased::execute() {
     std::vector<ColocationType> candidatePatterns = _prevalentPatterns;
-    while(!candidatePatterns.empty()) {
+    while (!candidatePatterns.empty()) {
         auto sample = _samplePatterns(candidatePatterns);
         auto feedback = _interactiveSurvey(sample);
 
         // Generate preferred and dislike patterns.
         std::vector<ColocationType> preferredPatterns;
         std::vector<ColocationType> dislikePatterns;
-        for(int i = 0; i < feedback.size(); ++i) {
-            if(feedback[i]) {
+        for (int i = 0; i < feedback.size(); ++i) {
+            if (feedback[i]) {
                 preferredPatterns.push_back(sample[i]);
             } else {
                 dislikePatterns.push_back(sample[i]);

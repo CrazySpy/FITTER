@@ -30,12 +30,13 @@ private:
 
     double _alpha = 0.5;
     double _influenceIndex;
+    double _mu;
 
     double _markovBoundary;
 
-    std::map<ColocationType, double> _singularity;
-    std::map<ColocationType, double> _universality;
-    std::map<ColocationType, double> _sampleRank;
+//    std::map<ColocationType, double> _singularity;
+//    std::map<ColocationType, double> _universality;
+//    std::map<ColocationType, double> _sampleRank;
 
 private:
     double _calculateCoOccurrenceValue(const FeatureType &feature1, const FeatureType &feature2);
@@ -47,9 +48,9 @@ private:
     double _calculateStructuralDistance(const ColocationType &pattern1, const ColocationType &pattern2);
     double _calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2);
 
-    double _calculateSingularity(const ColocationType &pattern);
-    double _calculateUniversality(const ColocationType &pattern);
-    void _generateSampleRank();
+//    double _calculateSingularity(const ColocationType &pattern);
+//    double _calculateUniversality(const ColocationType &pattern);
+//    void _generateSampleRank();
 
     std::vector<ColocationType> _samplePatterns(std::vector<ColocationType> &candidatePatterns);
     std::vector<bool> _interactiveSurvey(const std::vector<ColocationType> &samplePatterns);
@@ -68,6 +69,7 @@ public:
     EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
                    unsigned int sampleSize, double markovBoundary,
                    double influenceIndex,
+                   double mu,
                    Simulator *simulator = nullptr);
 
     std::vector<ColocationType> execute();
