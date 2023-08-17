@@ -392,7 +392,6 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
     // Then, calculate the nearest patterns of each preferred pattern.
     std::set<ColocationType> predictedPatterns;
     for(const auto &preferredPattern : preferredPatterns) {
-        double minDistance = -1;
         std::vector<std::pair<double, ColocationType>> similarities;
         for(auto &candidatePattern : candidatePatterns) {
             if(preferredPattern == candidatePattern) continue;
@@ -420,7 +419,6 @@ void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candida
                                             const std::vector<ColocationType> &dislikePatterns) {
     std::set<ColocationType> predictedPatterns;
     for(const auto &dislikePattern : dislikePatterns) {
-        double minDistance = -1;
         std::vector<std::pair<double, ColocationType>> similarities;
         for(auto &candidatePattern : candidatePatterns) {
             if(dislikePattern == candidatePattern) continue;
