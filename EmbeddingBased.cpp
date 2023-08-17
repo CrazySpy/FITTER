@@ -7,18 +7,21 @@
 #include <iostream>
 #include <numeric>
 #include <unordered_set>
+#include <set>
 
 #include "EmbeddingBased.h"
 #include "Utils.h"
 #include "FCM.h"
 
 EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                               unsigned int sampleSize, double markovBoundary, double influenceIndex, double mu, Simulator *simulator)
+                               unsigned int sampleSize, double markovBoundary, double influenceIndex, double mu, unsigned int ns,
+                               Simulator *simulator)
     : _prevalentPatterns(prevalentPatterns),
       _sampleSize(sampleSize),
       _markovBoundary(markovBoundary),
       _influenceIndex(influenceIndex),
       _mu(mu),
+      _nearestSize(ns),
       _simulator(simulator) {
     for(auto &prevalentPattern : _prevalentPatterns) {
         std::sort(prevalentPattern.begin(), prevalentPattern.end());
@@ -386,28 +389,28 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
     // First, insert positive feedback pattern into coarse set.
     _coarsePatterns.insert(_coarsePatterns.end(), std::begin(preferredPatterns), std::end(preferredPatterns));
 
-    // Then, find the similarity of each preferred pattern.
-    std::vector<ColocationType> similarities;
-    for(int i = 0; i < preferredPatterns.size(); ++i) {
+    // Then, calculate the nearest patterns of each preferred pattern.
+    std::set<ColocationType> predictedPatterns;
+    for(const auto &preferredPattern : preferredPatterns) {
         double minDistance = -1;
-        ColocationType similarity;
-        for(int j = 0; j < candidatePatterns.size(); ++j) {
-            double distance = _calculatePatternDistance(preferredPatterns[i], candidatePatterns[j]);
-            if(minDistance < 0 || distance < minDistance) {
-                minDistance = distance;
-                similarity = candidatePatterns[j];
-            }
+        std::vector<std::pair<double, ColocationType>> similarities;
+        for(auto &candidatePattern : candidatePatterns) {
+            if(preferredPattern == candidatePattern) continue;
+            double distance = _calculatePatternDistance(preferredPattern, candidatePattern);
+            similarities.emplace_back(distance, candidatePattern);
         }
-        similarities.push_back(similarity);
+        std::sort(similarities.begin(), similarities.end());
+        similarities.erase(std::unique(similarities.begin(), similarities.end()), similarities.end());
+
+        for(auto it = similarities.begin(); it != similarities.end() && it != similarities.begin() + _nearestSize; ++it) {
+            predictedPatterns.insert((*it).second);
+        }
     }
 
-    std::sort(similarities.begin(), similarities.end());
-    similarities.erase(std::unique(similarities.begin(), similarities.end()), similarities.end());
-
     auto candidateEnd = candidatePatterns.end();
-    for(auto &similarity : similarities) {
-        candidateEnd = std::remove(std::begin(candidatePatterns), candidateEnd, similarity);
-        _coarsePatterns.push_back(similarity);
+    for(auto &predictedPattern : predictedPatterns) {
+        candidateEnd = std::remove(std::begin(candidatePatterns), candidateEnd, predictedPattern);
+        _coarsePatterns.push_back(predictedPattern);
     }
 
     candidatePatterns.erase(candidateEnd, candidatePatterns.end());
@@ -415,24 +418,28 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
 
 void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candidatePatterns,
                                             const std::vector<ColocationType> &dislikePatterns) {
-    std::vector<ColocationType> similarities;
-    for(int i = 0; i < dislikePatterns.size(); ++i) {
+    std::set<ColocationType> predictedPatterns;
+    for(const auto &dislikePattern : dislikePatterns) {
         double minDistance = -1;
-        ColocationType similarity;
-        for(int j = 0; j < candidatePatterns.size(); ++j) {
-            double distance = _calculatePatternDistance(dislikePatterns[i], candidatePatterns[j]);
-            if(minDistance < 0 || distance < minDistance) {
-                minDistance = distance;
-                similarity = candidatePatterns[j];
-            }
+        std::vector<std::pair<double, ColocationType>> similarities;
+        for(auto &candidatePattern : candidatePatterns) {
+            if(dislikePattern == candidatePattern) continue;
+            double distance = _calculatePatternDistance(dislikePattern, candidatePattern);
+            similarities.emplace_back(distance, candidatePattern);
         }
-        similarities.push_back(similarity);
+        std::sort(similarities.begin(), similarities.end());
+        similarities.erase(std::unique(similarities.begin(), similarities.end()), similarities.end());
+
+        for(auto it = similarities.begin(); it != similarities.end() && it != similarities.begin() + _nearestSize; ++it) {
+            predictedPatterns.insert((*it).second);
+        }
     }
 
     auto candidateEnd = candidatePatterns.end();
-    for(auto &similarity : similarities) {
-        candidateEnd = std::remove(std::begin(candidatePatterns), candidateEnd, similarity);
+    for(auto &predictedPattern : predictedPatterns) {
+        candidateEnd = std::remove(std::begin(candidatePatterns), candidateEnd, predictedPattern);
     }
+
     candidatePatterns.erase(candidateEnd, candidatePatterns.end());
 }
 

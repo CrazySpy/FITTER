@@ -31,6 +31,7 @@ private:
     double _alpha = 0.5;
     double _influenceIndex;
     double _mu;
+    unsigned int _nearestSize;
 
     double _markovBoundary;
 
@@ -59,7 +60,7 @@ private:
                                const std::vector<ColocationType> &preferredPatterns);
     void _filterDislikePatterns(std::vector<ColocationType> &candidatePatterns,
                                                 const std::vector<ColocationType> &dislikePatterns);
-    std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns();
+    std::vector<ColocationType> _filterCoarsePatterns();
 
     Eigen::MatrixXd _calculateRepresentationColumnWiseDistances(const Eigen::MatrixXd &N);
     double _calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances);
@@ -70,6 +71,7 @@ public:
                    unsigned int sampleSize, double markovBoundary,
                    double influenceIndex,
                    double mu,
+                   unsigned int ns,
                    Simulator *simulator = nullptr);
 
     std::vector<ColocationType> execute();
