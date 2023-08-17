@@ -6,7 +6,7 @@
 #define EMBEDDINGBASED_EMBEDDINGBASED_H
 
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 #include "Types.h"
 #include "Simulator.h"
@@ -34,6 +34,8 @@ private:
     unsigned int _nearestSize;
 
     double _markovBoundary;
+
+    std::map<ColocationType, std::map<ColocationType, double>> _patternDistanceCache;
 
 //    std::map<ColocationType, double> _singularity;
 //    std::map<ColocationType, double> _universality;
@@ -73,6 +75,8 @@ public:
                    double mu,
                    unsigned int ns,
                    Simulator *simulator = nullptr);
+
+    void printNearestFeature();
 
     std::vector<ColocationType> execute();
 };

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <numeric>
 
 using InstanceIdType = std::string;
 using FeatureType = std::string;

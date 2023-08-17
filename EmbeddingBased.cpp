@@ -8,10 +8,20 @@
 #include <numeric>
 #include <unordered_set>
 #include <set>
+#include <string>
 
 #include "EmbeddingBased.h"
 #include "Utils.h"
 #include "FCM.h"
+
+
+std::ostream& operator << (std::ostream &os, const ColocationType &pattern) {
+    os << std::accumulate(std::next(pattern.begin()), pattern.end(), pattern.front(), [](std::string str, FeatureType feature) {
+        return str + ", " + feature;
+    });
+
+    return os;
+}
 
 EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
                                unsigned int sampleSize, double markovBoundary, double influenceIndex, double mu, unsigned int ns,
@@ -219,11 +229,14 @@ double EmbeddingBased::_calculateStructuralDistance(const ColocationType &patter
 }
 
 double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+    if(_patternDistanceCache.count(pattern1) && _patternDistanceCache[pattern1].count(pattern2))
+        return _patternDistanceCache[pattern1][pattern2];
+
     double semanticDistance = _calculateSemanticDistance(pattern1, pattern2);
     double structuralDistance = _calculateStructuralDistance(pattern1, pattern2);
 
     //return 2 * semanticDistance * (1 - structuralDistance) / (semanticDistance + (1 - structuralDistance));
-    return semanticDistance / std::pow(structuralDistance, _influenceIndex);
+    return _patternDistanceCache[pattern1][pattern2] = semanticDistance / std::pow(structuralDistance, _influenceIndex);
     //return (semanticDistance + (1 - structuralDistance)) / 2;
 }
 
@@ -395,15 +408,24 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
         std::vector<std::pair<double, ColocationType>> similarities;
         for(auto &candidatePattern : candidatePatterns) {
             if(preferredPattern == candidatePattern) continue;
-            double distance = _calculatePatternDistance(preferredPattern, candidatePattern);
+
+            double distance = 0;
+            if(preferredPattern < candidatePattern) {
+                distance = _calculatePatternDistance(preferredPattern, candidatePattern);
+            } else {
+                distance = _calculatePatternDistance(candidatePattern, preferredPattern);
+            }
             similarities.emplace_back(distance, candidatePattern);
         }
         std::sort(similarities.begin(), similarities.end());
         similarities.erase(std::unique(similarities.begin(), similarities.end()), similarities.end());
 
+//        std::cout << "Like: " << preferredPattern << ": " << std::endl;
         for(auto it = similarities.begin(); it != similarities.end() && it != similarities.begin() + _nearestSize; ++it) {
             predictedPatterns.insert((*it).second);
+//            std::cout << (*it).second << std::endl;
         }
+//        std::cout << std::endl;
     }
 
     auto candidateEnd = candidatePatterns.end();
@@ -422,15 +444,24 @@ void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candida
         std::vector<std::pair<double, ColocationType>> similarities;
         for(auto &candidatePattern : candidatePatterns) {
             if(dislikePattern == candidatePattern) continue;
-            double distance = _calculatePatternDistance(dislikePattern, candidatePattern);
+
+            double distance = 0;
+            if(dislikePattern < candidatePattern) {
+                distance = _calculatePatternDistance(dislikePattern, candidatePattern);
+            } else {
+                distance = _calculatePatternDistance(candidatePattern, dislikePattern);
+            }
             similarities.emplace_back(distance, candidatePattern);
         }
         std::sort(similarities.begin(), similarities.end());
         similarities.erase(std::unique(similarities.begin(), similarities.end()), similarities.end());
 
+//        std::cout << "Dislike: " << dislikePattern << ": " << std::endl;
         for(auto it = similarities.begin(); it != similarities.end() && it != similarities.begin() + _nearestSize; ++it) {
             predictedPatterns.insert((*it).second);
+//            std::cout << (*it).second << std::endl;
         }
+//        std::cout << std::endl;
     }
 
     auto candidateEnd = candidatePatterns.end();
@@ -500,6 +531,27 @@ Eigen::MatrixXd EmbeddingBased::_selectRepresentation(const Eigen::MatrixXd &rep
     return newRepresentation;
 }
 
+void EmbeddingBased::printNearestFeature() {
+    for(int i = 0; i < _features.size(); ++i) {
+        const auto feature1 = _features[i];
+        Eigen::VectorXd embedding1 = _embeddingRepresentation.row(i);
+        double bestDistance = -1;
+        FeatureType bestFeature;
+        for(int j = 0; j < _features.size(); ++j) {
+            if(i == j) continue;
+            const auto feature2 = _features[j];
+            Eigen::VectorXd embedding2 = _embeddingRepresentation.row(j);
+            double distance = (embedding1 - embedding2).lpNorm<2>();
+            if(bestDistance < 0 || distance < bestDistance) {
+                bestDistance = distance;
+                bestFeature = feature2;
+            }
+        }
+
+        std::cout << feature1 << " : " << bestFeature << std::endl;
+    }
+}
+
 std::vector<ColocationType> EmbeddingBased::execute() {
     std::vector<ColocationType> candidatePatterns = _prevalentPatterns;
     while (!candidatePatterns.empty()) {
@@ -522,6 +574,8 @@ std::vector<ColocationType> EmbeddingBased::execute() {
     }
 
     std::sort(_coarsePatterns.begin(), _coarsePatterns.end());
+
+//    printNearestFeature();
 
     return _filterCoarsePatterns();
 }
