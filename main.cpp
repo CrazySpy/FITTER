@@ -2,25 +2,26 @@
 #include <iostream>
 #include <string>
 
-#include "EmbeddingBased.h"
+#include "FITTER.h"
 #include "Types.h"
 #include "EventClock/EventClock.hpp"
 
 using namespace std;
 
 int main(int argc, char **argv) {
-    if(argc != 8) {
-        cout << "Parameter format :\n" << argv[0] << " <prevalent pattern dataset path> <preferred pattern dataset path> <sample size> <Markov boundary> <Influence Index> <Mu> <Nearest pattern size>\n";
+    if(argc != 9) {
+        cout << "Parameter format :\n" << argv[0] << " <prevalent pattern dataset path> <preferred pattern dataset path> <sample size> <alpha> <Markov boundary> <Influence Index> <Mu> <Nearest pattern size>\n";
         return 0;
     }
 
     string prevalentPatternDataset(argv[1]);
     string preferredPatternDataset(argv[2]);
     unsigned int sampleSize = stoul(argv[3]);
-    double markovBoundary = stod(argv[4]);
-    double influenceIndex = stod(argv[5]);
-    double mu = stod(argv[6]);
-    unsigned int nearestSize = stoul(argv[7]);
+    double alpha = stod(argv[4]);
+    double markovBoundary = stod(argv[5]);
+    double influenceIndex = stod(argv[6]);
+    double mu = stod(argv[7]);
+    unsigned int nearestSize = stoul(argv[8]);
 
     // Read prevalent patterns.
     std::vector<ColocationType> prevalentPatterns;
@@ -68,9 +69,9 @@ int main(int argc, char **argv) {
 
     EventClock<TimeTicks::Microseconds> eventClock;
     eventClock.startClock("total");
-    EmbeddingBased embedding(prevalentPatterns, sampleSize, markovBoundary, influenceIndex, mu, nearestSize, &simulator);
+    FITTER fitter(prevalentPatterns, sampleSize, alpha, markovBoundary, influenceIndex, mu, nearestSize, &simulator);
     eventClock.startClock("execution");
-    auto predictPatterns = embedding.execute();
+    auto predictPatterns = fitter.execute();
     eventClock.stopClock("execution");
     eventClock.stopClock("total");
 

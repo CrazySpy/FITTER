@@ -10,7 +10,7 @@
 #include <set>
 #include <string>
 
-#include "EmbeddingBased.h"
+#include "FITTER.h"
 #include "Utils.h"
 #include "FCM.h"
 
@@ -23,11 +23,12 @@ std::ostream& operator << (std::ostream &os, const ColocationType &pattern) {
     return os;
 }
 
-EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                               unsigned int sampleSize, double markovBoundary, double influenceIndex, double mu, unsigned int ns,
-                               Simulator *simulator)
+FITTER::FITTER(const std::vector<ColocationType> &prevalentPatterns,
+               unsigned int sampleSize, double alpha, double markovBoundary, double influenceIndex, double mu, unsigned int ns,
+               Simulator *simulator)
     : _prevalentPatterns(prevalentPatterns),
       _sampleSize(sampleSize),
+      _alpha(alpha),
       _markovBoundary(markovBoundary),
       _influenceIndex(influenceIndex),
       _mu(mu),
@@ -56,7 +57,7 @@ EmbeddingBased::EmbeddingBased(const std::vector<ColocationType> &prevalentPatte
 //    _generateSampleRank();
 }
 
-double EmbeddingBased::_calculateCoOccurrenceValue(const FeatureType &feature1, const FeatureType &feature2) {
+double FITTER::_calculateCoOccurrenceValue(const FeatureType &feature1, const FeatureType &feature2) {
     unsigned int coOccurrenceTime = 0;
     unsigned int feature1OccurrenceTime = 0;
     for(auto &prevalentPattern : _prevalentPatterns) {
@@ -74,7 +75,7 @@ double EmbeddingBased::_calculateCoOccurrenceValue(const FeatureType &feature1, 
     return 1.0 * coOccurrenceTime / feature1OccurrenceTime;
 }
 
-void EmbeddingBased::_constructCoOccurrenceMatrix() {
+void FITTER::_constructCoOccurrenceMatrix() {
     _coOccurrenceMatrix = Eigen::MatrixXd(_features.size(), _features.size());
     for(int i = 0; i < _features.size(); ++i) {
         for(int j = 0; j < _features.size(); ++j) {
@@ -83,7 +84,7 @@ void EmbeddingBased::_constructCoOccurrenceMatrix() {
     }
 }
 
-void EmbeddingBased::_constructIndicatorMatrix() {
+void FITTER::_constructIndicatorMatrix() {
 //    cv::Mat cvCoOccurrenceMatrix;
 //    Eigen::MatrixXf eigenCoOccurrenceMatrix = _coOccurrenceMatrix.cast<float>();
 
@@ -136,7 +137,7 @@ void EmbeddingBased::_constructIndicatorMatrix() {
     std::cout << "Iteration round: " << iterationRound << std::endl;
 }
 
-void EmbeddingBased::_constructEmbeddingRepresentation() {
+void FITTER::_constructEmbeddingRepresentation() {
     Eigen::MatrixXd centered = _indicatorMatrix.cast<double>().rowwise() - _indicatorMatrix.cast<double>().colwise().mean();
     Eigen::MatrixXd cov = (centered.transpose() * centered) / double(centered.cols() - 1);
 
@@ -167,7 +168,7 @@ void EmbeddingBased::_constructEmbeddingRepresentation() {
     std::cout << "Eliminate column number: " << N.cols() - _embeddingRepresentation.cols() << std::endl;
 }
 
-double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+double FITTER::_calculateSemanticDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
     std::vector<Eigen::Index> pattern1Indices, pattern2Indices;
     for(int i = 0; i < pattern1.size(); ++i) {
         pattern1Indices.push_back(_featureIndex[pattern1[i]]);
@@ -220,7 +221,7 @@ double EmbeddingBased::_calculateSemanticDistance(const ColocationType &pattern1
     return totalDistance / 2;
 }
 
-double EmbeddingBased::_calculateStructuralDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+double FITTER::_calculateStructuralDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
     ColocationType union_features, intersected_features;
     std::set_union(pattern1.begin(), pattern1.end(), pattern2.begin(), pattern2.end(), std::back_inserter(union_features));
     std::set_intersection(pattern1.begin(), pattern1.end(),pattern2.begin(), pattern2.end(), std::back_inserter(intersected_features) );
@@ -228,7 +229,7 @@ double EmbeddingBased::_calculateStructuralDistance(const ColocationType &patter
     return 1 - intersected_features.size() * 1.0 / union_features.size();
 }
 
-double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
+double FITTER::_calculatePatternDistance(const ColocationType &pattern1, const ColocationType &pattern2) {
     if(_patternDistanceCache.count(pattern1) && _patternDistanceCache[pattern1].count(pattern2))
         return _patternDistanceCache[pattern1][pattern2];
 
@@ -240,7 +241,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
     //return (semanticDistance + (1 - structuralDistance)) / 2;
 }
 
-//double EmbeddingBased::_calculateSingularity(const ColocationType &pattern) {
+//double FITTER::_calculateSingularity(const ColocationType &pattern) {
 //    // $D(P) = max_{f \in P}(1 / \Vert c(f) \Vert)$
 //    // c(f) is the co-occurrence vector of feature f.
 //
@@ -257,7 +258,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
 //    return singularity;
 //}
 //
-//double EmbeddingBased::_calculateUniversality(const ColocationType &pattern) {
+//double FITTER::_calculateUniversality(const ColocationType &pattern) {
 //    std::vector<unsigned int> featureIndices;
 //    for(auto &feature : pattern) {
 //        featureIndices.push_back(_featureIndex[feature]);
@@ -273,7 +274,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
 //    return (coOccurrenceMatrix * coOccurrenceMatrix).diagonal().maxCoeff() / pattern.size(); // U5
 //}
 //
-//void EmbeddingBased::_generateSampleRank() {
+//void FITTER::_generateSampleRank() {
 //    for(auto &pattern : _prevalentPatterns) {
 //        double singularity = _calculateSingularity(pattern);
 //        double universality = _calculateUniversality(pattern);
@@ -288,7 +289,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
 //    }
 //}
 
-//std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
+//std::vector<ColocationType> FITTER::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
 //    if(_sampleSize >= candidatePatterns.size()) {
 //        auto sample = candidatePatterns;
 //        candidatePatterns.clear();
@@ -312,7 +313,7 @@ double EmbeddingBased::_calculatePatternDistance(const ColocationType &pattern1,
 //    return sample;
 //}
 
-std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
+std::vector<ColocationType> FITTER::_samplePatterns(std::vector<ColocationType> &candidatePatterns) {
     if(_sampleSize >= candidatePatterns.size()) {
         auto sample = candidatePatterns;
         candidatePatterns.clear();
@@ -375,7 +376,7 @@ std::vector<ColocationType> EmbeddingBased::_samplePatterns(std::vector<Colocati
     return samples;
 }
 
-std::vector<bool> EmbeddingBased::_interactiveSurvey(const std::vector<ColocationType> &samplePatterns) {
+std::vector<bool> FITTER::_interactiveSurvey(const std::vector<ColocationType> &samplePatterns) {
     std::vector<bool> feedback;
     for(auto &pattern : samplePatterns) {
         if(_simulator == nullptr) {
@@ -397,8 +398,8 @@ std::vector<bool> EmbeddingBased::_interactiveSurvey(const std::vector<Colocatio
     return feedback;
 }
 
-void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidatePatterns,
-                                           const std::vector<ColocationType> &preferredPatterns) {
+void FITTER::_selectCoarsePatterns(std::vector<ColocationType> &candidatePatterns,
+                                   const std::vector<ColocationType> &preferredPatterns) {
     // First, insert positive feedback pattern into coarse set.
     _coarsePatterns.insert(_coarsePatterns.end(), std::begin(preferredPatterns), std::end(preferredPatterns));
 
@@ -437,8 +438,8 @@ void EmbeddingBased::_selectCoarsePatterns(std::vector<ColocationType> &candidat
     candidatePatterns.erase(candidateEnd, candidatePatterns.end());
 }
 
-void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candidatePatterns,
-                                            const std::vector<ColocationType> &dislikePatterns) {
+void FITTER::_filterDislikePatterns(std::vector<ColocationType> &candidatePatterns,
+                                    const std::vector<ColocationType> &dislikePatterns) {
     std::set<ColocationType> predictedPatterns;
     for(const auto &dislikePattern : dislikePatterns) {
         std::vector<std::pair<double, ColocationType>> similarities;
@@ -472,11 +473,11 @@ void EmbeddingBased::_filterDislikePatterns(std::vector<ColocationType> &candida
     candidatePatterns.erase(candidateEnd, candidatePatterns.end());
 }
 
-std::vector<ColocationType> EmbeddingBased::_filterCoarsePatterns() {
+std::vector<ColocationType> FITTER::_filterCoarsePatterns() {
     return _coarsePatterns;
 }
 
-Eigen::MatrixXd EmbeddingBased::_calculateRepresentationColumnWiseDistances(const Eigen::MatrixXd &N) {
+Eigen::MatrixXd FITTER::_calculateRepresentationColumnWiseDistances(const Eigen::MatrixXd &N) {
     Eigen::MatrixXd distances(N.cols(), N.cols());
     for(int i = 0; i < N.cols(); ++i) {
         Eigen::VectorXd col1 = N.col(i);
@@ -491,16 +492,16 @@ Eigen::MatrixXd EmbeddingBased::_calculateRepresentationColumnWiseDistances(cons
     return distances;
 }
 
-double EmbeddingBased::_calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances) {
+double FITTER::_calculateBetaByMarkovInequality(const Eigen::MatrixXd &distances) {
     double mean = distances.mean();
     std::cout << "Means: " << mean << std::endl;
     double a = 1.0 / (1 - _markovBoundary);
     return mean * a;
 }
 
-Eigen::MatrixXd EmbeddingBased::_selectRepresentation(const Eigen::MatrixXd &representation,
-                                                      const Eigen::MatrixXd &columnWiseDistances,
-                                                      double beta) {
+Eigen::MatrixXd FITTER::_selectRepresentation(const Eigen::MatrixXd &representation,
+                                              const Eigen::MatrixXd &columnWiseDistances,
+                                              double beta) {
     Eigen::MatrixXd newRepresentation(representation.rows(), 1);
     // Choose the feature with the largest distances to others as initial.
     Eigen::Index initialRepresentationIndex;
@@ -531,7 +532,7 @@ Eigen::MatrixXd EmbeddingBased::_selectRepresentation(const Eigen::MatrixXd &rep
     return newRepresentation;
 }
 
-void EmbeddingBased::printNearestFeature() {
+void FITTER::printNearestFeature() {
     for(int i = 0; i < _features.size(); ++i) {
         const auto feature1 = _features[i];
         Eigen::VectorXd embedding1 = _embeddingRepresentation.row(i);
@@ -552,7 +553,7 @@ void EmbeddingBased::printNearestFeature() {
     }
 }
 
-std::vector<ColocationType> EmbeddingBased::execute() {
+std::vector<ColocationType> FITTER::execute() {
     std::vector<ColocationType> candidatePatterns = _prevalentPatterns;
     while (!candidatePatterns.empty()) {
         auto sample = _samplePatterns(candidatePatterns);

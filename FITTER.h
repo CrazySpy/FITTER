@@ -2,8 +2,8 @@
 // Created by jiang on 2022/5/31.
 //
 
-#ifndef EMBEDDINGBASED_EMBEDDINGBASED_H
-#define EMBEDDINGBASED_EMBEDDINGBASED_H
+#ifndef EMBEDDINGBASED_FITTER_H
+#define EMBEDDINGBASED_FITTER_H
 
 #include <vector>
 #include <map>
@@ -13,7 +13,7 @@
 
 #include <Eigen/Dense>
 
-class EmbeddingBased {
+class FITTER {
 private:
     std::vector<FeatureType> _features;
     std::unordered_map<FeatureType, size_t> _featureIndex;
@@ -69,12 +69,12 @@ private:
     Eigen::MatrixXd _selectRepresentation(const Eigen::MatrixXd &representation, const Eigen::MatrixXd &columnWiseDistances, double beta);
 
 public:
-    EmbeddingBased(const std::vector<ColocationType> &prevalentPatterns,
-                   unsigned int sampleSize, double markovBoundary,
-                   double influenceIndex,
-                   double mu,
-                   unsigned int ns,
-                   Simulator *simulator = nullptr);
+    FITTER(const std::vector<ColocationType> &prevalentPatterns,
+           unsigned int sampleSize, double alpha, double markovBoundary,
+           double influenceIndex,
+           double mu,
+           unsigned int ns,
+           Simulator *simulator = nullptr);
 
     void printNearestFeature();
 
@@ -82,4 +82,4 @@ public:
 };
 
 
-#endif //EMBEDDINGBASED_EMBEDDINGBASED_H
+#endif //EMBEDDINGBASED_FITTER_H
